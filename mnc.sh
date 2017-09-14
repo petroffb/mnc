@@ -112,7 +112,7 @@ echo "/home/user/share $1/255.255.255.0(rw,no_root_squash,async,subtree_check)" 
 /etc/init.d/nfs-kernel-server restart
 else
 apt-get -f install /home/user/auto/sharing/client/*.deb
-deb mkdir -p /home/user/share/
+mkdir -p /home/user/share/
 fi
 
 # Configuration time_syncro

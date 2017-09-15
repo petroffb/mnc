@@ -1,7 +1,7 @@
 Ключи скрипта по порядку: [ip-сервера] [server\\client share] [server\\client time_syncro] [first CPU core] [last CPU core]
 
 где
-ip-сервера			- IPv4-адрес локального сервера
+ip-сервера			- IPv4-адрес share-сервера
 server\client share		- настроить серверную или клиентскую часть для сервиса share
 server\client time_syncro	- настроить серверную или клиентскую часть для программы time_syncro
 first CPU core			- порядковый номер первого ядра для использования орловским софтом

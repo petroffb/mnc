@@ -79,12 +79,12 @@ tar xf ./programs.tar.gz
 cpu_cores="$(seq -s ',' $4 1 $5)"
 mkdir /home/user/DPDK/
 chown user:user /home/user/DPDK/
-cp /home/user/auto/DPDK/dpdk-16.11.3.tar.xz /home/user/DPDK/
+cp /home/user/auto/DPDK/dpdk-16.11.2.tar.xz /home/user/DPDK/
 cd /home/user/DPDK/
-tar xf ./dpdk-16.11.3.tar.xz
-cd ./dpdk-stable-16.11.3/
+tar xf ./dpdk-16.11.2.tar.xz
+cd ./dpdk-stable-16.11.2/
 make install DESTDIR=dpdk_install T=x86_64-native-linuxapp-gcc CONFIG_RTE_BUILD_SHARED_LIB=y EXTRA_CFLAGS="-fPIC"
-sed -i "s/GRUB_CMDLINE_LINUX=\"/&default_hugepagesz=1G\ hugepagesz=1G\ hugepages=0\ isolcpus=$cpu_cores/g" $file_grub
+sed -i "s/GRUB_CMDLINE_LINUX=\"/&default_hugepagesz=1G\ hugepagesz=1G\ hugepages=2\ isolcpus=$cpu_cores/g" $file_grub
 update-grub
 cp /home/user/auto/other/HGPG_for_DPDK.service /etc/systemd/system/
 cp /home/user/auto/other/distrib_HGPG_DPDK.sh /home/user/DPDK/
@@ -95,13 +95,13 @@ mkdir -p /mnt/huge
 touch /etc/ld.so.conf.d/library.conf
 echo "/home/user/programs/library/" | tee -a /etc/ld.so.conf.d/library.conf
 touch /etc/ld.so.conf.d/librte.conf
-echo "/home/user/DPDK/dpdk-stable-16.11.3/x86_64-native-linuxapp-gcc/lib/" | tee -a /etc/ld.so.conf.d/librte.conf
+echo "/home/user/DPDK/dpdk-stable-16.11.2/x86_64-native-linuxapp-gcc/lib/" | tee -a /etc/ld.so.conf.d/librte.conf
 ldconfig
-cp /home/user/auto/libhtgiolib/libhtgiolib.so.1.3.0 /home/user/DPDK/
-ln -s /home/user/DPDK/libhtgiolib.so.1.3.0 /usr/lib/libhtgiolib.so
+cp /home/user/auto/libhtgiolib/libhtgiolib.so.1.2.10 /home/user/DPDK/
+ln -s /home/user/DPDK/libhtgiolib.so.1.2.10 /usr/lib/libhtgiolib.so
 ln -s /lib/x86_64-linux-gnu/libprocps.so.4 /lib/x86_64-linux-gnu/libprocps.so.3
 cp /home/user/auto/boost/* /usr/lib/x86_64-linux-gnu/
-sed -i -e '/^exit 0/i/home/user/programs/run.sh' /etc/rc.local
+#sed -i -e '/^exit 0/i/home/user/programs/run.sh' /etc/rc.local
 
 # Configuration share-service
 if [ $2 = server ]
@@ -112,7 +112,7 @@ echo "/home/user/share $1/255.255.255.0(rw,no_root_squash,async,subtree_check)" 
 /etc/init.d/nfs-kernel-server restart
 else
 apt-get -f install /home/user/auto/sharing/client/*.deb
-mkdir -p /home/user/share/
+deb mkdir -p /home/user/share/
 fi
 
 # Configuration time_syncro

@@ -1,41 +1,108 @@
 #!/bin/bash
-# 1 parameter - local server ip
-# 2 parameter - server\client share
-# 3 parameter - server\client time_syncro
-# 4 parameter - first CPU core
-# 5 parameter - last CPU core
 
 file_auto_update20=/etc/apt/apt.conf.d/20auto-upgrades
 file_auto_update50=/etc/apt/apt.conf.d/50unattended-upgrades
 file_repo=/etc/apt/sources.list
 file_grub=/etc/default/grub
-
-#SETCOLOR_SUCCESS="echo -en \\033[1;32m"
-#SETCOLOR_FAILURE="echo -en \\033[1;31m"
-#SETCOLOR_NORMAL="echo -en \\033[0;39m"
-
-if [ $# != 5 ]
-then
-echo "Параметры скрипта по порядку: [ip-сервера] [server\\client share] [server\\client time_syncro] [first CPU core] [last CPU core]"
-exit
-else
-:
-fi
+cond="bad"
 
 if [ -f /home/user/script_flag ]
 # Second starting
 then
-if [ $2 = client ]
+counter=0
+while read line; do
+((counter++))
+case $counter in
+  1 ) srv_clnt=$line;;
+  2 ) share_server_ip=$line
+  * ) :;;
+esac
+done < /home/user/script_flag
+if [ $srv_clnt = client ]
   then
-mount $1:/home/user/share share
-echo "$1:/home/user/share /home/user/share nfs timeo=50,hard,intr" | tee -a /etc/fstab
+mount $share_server_ip:/home/user/share share
+echo "$share_server_ip:/home/user/share /home/user/share nfs timeo=50,hard,intr" | tee -a /etc/fstab
   else
 :
 fi
 rm /home/user/script_flag
 ldconfig
-# First starting
 else
+# First starting
+while [[ $cond != "ok" ]]; do
+echo "Сначала читай текст ВНИМАТЕЛЬНО, потом читай ЕЩЁ ВНИМАТЕЛЬНЕЕ, потом ДУМАЙ, потом уже вводи данные!"
+srv_clnt=2
+time_syncro_srv_port=0
+time_syncro_srv_ip=""
+while [ $srv_clnt == 2 ]; do
+  echo "Выбор варианта установки ПО:"
+  printf "0 - [S]erver\n1 - [C]lient\n"
+  read response
+  case $response in
+  0|[sS]* ) echo "Выбран вариант Server"
+      srv_clnt="server";;
+  1|[cC]* ) echo "Выбран вариант Client"
+      srv_clnt="client";;
+  * ) echo "Ваще тупой, да? Давай ещё раз попробуй.";;
+  esac
+done
+
+case $srv_clnt in
+  "server" ) while [[ $time_syncro_srv_port -le 1024 || $time_syncro_srv_port -gt 65535 ]]; do
+      echo "Порт [1025 - 65535] для подключения клиентов time_syncro (по умолчанию 27333) : "
+      read time_syncro_srv_port
+      if [ -z $time_syncro_srv_port ]
+      then time_syncro_srv_port=27333
+      else :
+      fi
+      done
+      echo "Выбран порт для подключения клиентов time_syncro: $time_syncro_srv_port"
+      echo "IP-адрес для share-сервера (для тех, кто в танке - адрес этого сервера):"
+      read share_server_ip
+      echo "Установлен адрес share-сервера: $share_server_ip"
+      ;;
+  "client" ) while [[ -z $time_syncro_srv_ip ]]; do
+      echo "Адрес сервера time_syncro:"
+      read time_syncro_srv_ip
+      done
+      while [[ $time_syncro_srv_port -le 1024 || $time_syncro_srv_port -gt 65535 ]]; do
+      echo "Порт [1025 - 65535] для подключения клиентов time_syncro (по умолчанию 27333) : "
+      read time_syncro_srv_port
+      if [ -z $time_syncro_srv_port ]
+      then time_syncro_srv_port=27333
+      else 
+      fi
+      done
+      echo "Выбран порт для подключения клиентов time_syncro: $time_syncro_srv_port"
+      echo "Период опроса сервера time_syncro (в минутах):"
+      read time_syncro_period
+      echo "Установлен период опроса сервера time_syncro (в минутах): $time_syncro_period"
+      echo "IP-адресс для share-сервера:"
+      read share_server_ip
+      echo "Установлен адрес share-сервера: $share_server_ip"
+      ;;
+  * ) echo "Нет понятия о варианте установки"
+      exit;;
+esac
+echo "Введите через пробел диапазон ядер для изоляции:"
+read first_cpu_core last_cpu_core
+echo "Используются следующие параметры:"
+echo "Вариант установки ПО - $srv_clnt"
+if [ $srv_clnt == "server" ]
+then
+  echo "Порт для подключения клиентов time_syncro - $time_syncro_srv_port"
+  echo "IP-адресс share-сервера - $share_server_ip"
+else
+  echo "Адрес сервера time_syncro - $time_syncro_srv_ip:$time_syncro_srv_port"
+  echo "Период опроса сервера time_syncro (в минутах): $time_syncro_period"
+  echo "IP-адресс share-сервера - $share_server_ip"
+fi
+echo "Используются ядра $first_cpu_core - $last_cpu_core"
+echo -n "Всё верно?(если да - пиши 'ок'): "
+read cond
+done
+
+# Main process
 if [ -e $file_auto_update20 ]
 then if [ -f $file_auto_update20 ]
   then
@@ -76,7 +143,7 @@ cd /home/user/programs/
 tar xf ./programs.tar.gz
 
 # installing DPDK
-cpu_cores="$(seq -s ',' $4 1 $5)"
+cpu_cores="$(seq -s ',' $first_cpu_core 1 $last_cpu_core)"
 mkdir /home/user/DPDK/
 chown user:user /home/user/DPDK/
 cp /home/user/auto/DPDK/dpdk-16.11.2.tar.xz /home/user/DPDK/
@@ -104,11 +171,11 @@ cp /home/user/auto/boost/* /usr/lib/x86_64-linux-gnu/
 #sed -i -e '/^exit 0/i/home/user/programs/run.sh' /etc/rc.local
 
 # Configuration share-service
-if [ $2 = server ]
+if [ $srv_clnt = server ]
 then
 apt-get -f install /home/user/auto/sharing/server/*.deb
 mkdir -p /home/user/share/
-echo "/home/user/share $1/255.255.255.0(rw,no_root_squash,async,subtree_check)" | sudo tee -a /etc/exports
+echo "/home/user/share $share_server_ip/255.255.255.0(rw,no_root_squash,async,subtree_check)" | sudo tee -a /etc/exports
 /etc/init.d/nfs-kernel-server restart
 else
 apt-get -f install /home/user/auto/sharing/client/*.deb
@@ -120,17 +187,21 @@ ln -s /home/user/auto/timesync/libproxy.so.1.0.0 /usr/lib/x86_64-linux-gnu/libpr
 ln -s /home/user/auto/timesync/libQt5Network.so.5.5.1 /usr/lib/x86_64-linux-gnu/libQt5Network.so.5
 chmod +x /home/user/auto/timesync/time_syncro
 ldconfig
-if [ $3 = server ]
+if [ $srv_clnt = server ]
 then
 cp /home/user/auto/timesync/server/time_sync_server.service /etc/systemd/system/
 cp /home/user/auto/timesync/server/time.sh /home/user/programs/
+sed -i "/time_syncro/c /home/user/auto/timesync/time_syncro -s $time_syncro_srv_port" /home/user/programs/time.sh
 systemctl enable time_sync_server.service
 else
 cp /home/user/auto/timesync/client/time_sync_client.service /etc/systemd/system/
 cp /home/user/auto/timesync/client/time.sh /home/user/programs/
+time_syncro_tmp=$time_syncro_srv_ip":"$time_syncro_srv_port" "$time_syncro_period
+sed -i "/time_syncro/c /home/user/auto/timesync/time_syncro -c $time_syncro_tmp" /home/user/programs/time.sh
 systemctl enable time_sync_client.service
 fi
 
-echo : > /home/user/script_flag
+echo $srv_clnt > /home/user/script_flag
+echo $share_server_ip >> /home/user/script_flag
 reboot
 fi

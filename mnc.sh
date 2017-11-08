@@ -46,7 +46,17 @@ while [ $srv_clnt == 2 ]; do
   * ) echo "Ваще тупой, да? Давай ещё раз попробуй.";;
   esac
 done
-
+echo "Вариант реализации пультовой части:"
+while [[ $response_pu != [0-1] ]]; do
+printf "0 - 83 приказ\n1 - NT\n"
+read response_pu
+done
+case $response_pu in
+  0 ) echo "Вариант реализации пультовой части: 83 приказ";;
+  1 ) echo "Вариант реализации пультовой части: NT";;
+  * ) echo "КОСЯК! Вариант реализации пультовой части: Неизвестно"
+      exit;;
+esac
 case $srv_clnt in
   "server" ) while [[ $time_syncro_srv_port -le 1024 || $time_syncro_srv_port -gt 65535 ]]; do
       echo "Порт [1025 - 65535] для подключения клиентов time_syncro (по умолчанию 27333) : "
@@ -138,9 +148,19 @@ dpkg -i /home/user/auto/deb_ubuntu16/*.deb
 
 # installing programs
 mkdir /home/user/programs/
-cp /home/user/auto/programs/programs.tar.gz /home/user/programs/
-cd /home/user/programs/
-tar xf ./programs.tar.gz
+case $response_pu in
+  0 ) tar -xf /home/user/auto/programs/83/programs.tar.gz -C /home/user/programs/
+      cp /home/user/auto/programs/83/lib/*.so /usr/lib/
+      mkdir /mnt/ram_disk/
+      printf "tmpfs     /mnt/ram_disk     tmpfs     rw,size=10G,x-gvfs-show     0 0\n" >> /etc/fstab
+      mount -a      
+      ;;
+  1 ) tar -xf /home/user/auto/programs/NT/programs.tar.gz -C /home/user/programs/
+      cp /home/user/auto/programs/NT/lib/*.so /usr/lib/
+      ;;
+  * ) echo "КОСЯК! Вариант реализации пультовой части: Неизвестно"
+      ;;
+esac
 
 # installing DPDK
 cpu_cores="$(seq -s ',' $first_cpu_core 1 $last_cpu_core)"
@@ -183,24 +203,28 @@ deb mkdir -p /home/user/share/
 fi
 
 # Configuration time_syncro
-ln -s /home/user/auto/timesync/libproxy.so.1.0.0 /usr/lib/x86_64-linux-gnu/libproxy.so.1
-ln -s /home/user/auto/timesync/libQt5Network.so.5.5.1 /usr/lib/x86_64-linux-gnu/libQt5Network.so.5
-chmod +x /home/user/auto/timesync/time_syncro
+mkdir /home/user/programs/time_syncro/
+cp /home/user/auto/timesync/*.* /home/user/programs/time_syncro/
+ln -s /home/user/programs/time_syncro/libproxy.so.1.0.0 /usr/lib/x86_64-linux-gnu/libproxy.so.1
+ln -s /home/user/programs/time_syncro/libQt5Network.so.5.5.1 /usr/lib/x86_64-linux-gnu/libQt5Network.so.5
+chmod +x /home/user/programs/time_syncro/time_syncro
 ldconfig
 if [ $srv_clnt = server ]
 then
 cp /home/user/auto/timesync/server/time_sync_server.service /etc/systemd/system/
-cp /home/user/auto/timesync/server/time.sh /home/user/programs/
-sed -i "/time_syncro/c /home/user/auto/timesync/time_syncro -s $time_syncro_srv_port" /home/user/programs/time.sh
+cp /home/user/auto/timesync/server/time.sh /home/user/programs/time_syncro/
+sed -i "/time_syncro/c /home/user/auto/timesync/time_syncro -s $time_syncro_srv_port" /home/user/programs/time_syncro/time.sh
 systemctl enable time_sync_server.service
 else
 cp /home/user/auto/timesync/client/time_sync_client.service /etc/systemd/system/
-cp /home/user/auto/timesync/client/time.sh /home/user/programs/
+cp /home/user/auto/timesync/client/time.sh /home/user/programs/time_syncro/
 time_syncro_tmp=$time_syncro_srv_ip":"$time_syncro_srv_port" "$time_syncro_period
-sed -i "/time_syncro/c /home/user/auto/timesync/time_syncro -c $time_syncro_tmp" /home/user/programs/time.sh
+sed -i "/time_syncro/c /home/user/auto/timesync/time_syncro -c $time_syncro_tmp" /home/user/programs/time_syncro/time.sh
 systemctl enable time_sync_client.service
 fi
+chmod +x /home/user/programs/time_syncro/time.sh
 
+#Making checkpoint
 echo $srv_clnt > /home/user/script_flag
 echo $share_server_ip >> /home/user/script_flag
 reboot

@@ -166,10 +166,10 @@ esac
 cpu_cores="$(seq -s ',' $first_cpu_core 1 $last_cpu_core)"
 mkdir /home/user/DPDK/
 chown user:user /home/user/DPDK/
-cp /home/user/auto/DPDK/dpdk-16.11.2.tar.xz /home/user/DPDK/
+cp /home/user/auto/DPDK/dpdk-16.11.3.tar.xz /home/user/DPDK/
 cd /home/user/DPDK/
-tar xf ./dpdk-16.11.2.tar.xz
-cd ./dpdk-stable-16.11.2/
+tar xf ./dpdk-16.11.3.tar.xz
+cd ./dpdk-stable-16.11.3/
 make install DESTDIR=dpdk_install T=x86_64-native-linuxapp-gcc CONFIG_RTE_BUILD_SHARED_LIB=y EXTRA_CFLAGS="-fPIC"
 sed -i "s/GRUB_CMDLINE_LINUX=\"/&default_hugepagesz=1G\ hugepagesz=1G\ hugepages=2\ isolcpus=$cpu_cores/g" $file_grub
 update-grub
@@ -182,10 +182,14 @@ mkdir -p /mnt/huge
 touch /etc/ld.so.conf.d/library.conf
 echo "/home/user/programs/library/" | tee -a /etc/ld.so.conf.d/library.conf
 touch /etc/ld.so.conf.d/librte.conf
-echo "/home/user/DPDK/dpdk-stable-16.11.2/x86_64-native-linuxapp-gcc/lib/" | tee -a /etc/ld.so.conf.d/librte.conf
+echo "/home/user/DPDK/dpdk-stable-16.11.3/x86_64-native-linuxapp-gcc/lib/" | tee -a /etc/ld.so.conf.d/librte.conf
+cp /home/user/auto/other/dpdkbind.service /etc/systemd/system/
+cp /home/user/auto/other/ipmimon.service /etc/systemd/system/
+systemctl enable dpdkbind.service
+systemctl enable ipmimon.service
 ldconfig
-cp /home/user/auto/libhtgiolib/libhtgiolib.so.1.2.10 /home/user/DPDK/
-ln -s /home/user/DPDK/libhtgiolib.so.1.2.10 /usr/lib/libhtgiolib.so
+cp /home/user/auto/libhtgiolib/libhtgiolib.so.1.3.0 /home/user/DPDK/
+ln -s /home/user/DPDK/libhtgiolib.so.1.3.0 /usr/lib/libhtgiolib.so
 ln -s /lib/x86_64-linux-gnu/libprocps.so.4 /lib/x86_64-linux-gnu/libprocps.so.3
 cp /home/user/auto/boost/* /usr/lib/x86_64-linux-gnu/
 #sed -i -e '/^exit 0/i/home/user/programs/run.sh' /etc/rc.local
@@ -227,5 +231,6 @@ chmod +x /home/user/programs/time_syncro/time.sh
 #Making checkpoint
 echo $srv_clnt > /home/user/script_flag
 echo $share_server_ip >> /home/user/script_flag
+
 reboot
 fi

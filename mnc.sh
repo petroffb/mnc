@@ -14,7 +14,7 @@ while read line; do
 ((counter++))
 case $counter in
   1 ) srv_clnt=$line;;
-  2 ) share_server_ip=$line
+  2 ) share_server_ip=$line;;
   * ) :;;
 esac
 done < /home/user/script_flag
@@ -81,6 +81,7 @@ case $srv_clnt in
       if [ -z $time_syncro_srv_port ]
       then time_syncro_srv_port=27333
       else 
+      :
       fi
       done
       echo "Выбран порт для подключения клиентов time_syncro: $time_syncro_srv_port"

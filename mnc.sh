@@ -210,6 +210,7 @@ fi
 # Configuration time_syncro
 mkdir /home/user/programs/time_syncro/
 cp /home/user/auto/timesync/*.* /home/user/programs/time_syncro/
+cp /home/user/auto/timesync/time_syncro /home/user/programs/time_syncro/
 ln -s /home/user/programs/time_syncro/libproxy.so.1.0.0 /usr/lib/x86_64-linux-gnu/libproxy.so.1
 ln -s /home/user/programs/time_syncro/libQt5Network.so.5.5.1 /usr/lib/x86_64-linux-gnu/libQt5Network.so.5
 chmod +x /home/user/programs/time_syncro/time_syncro

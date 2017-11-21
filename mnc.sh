@@ -204,7 +204,7 @@ echo "/home/user/share $share_server_ip/255.255.255.0(rw,no_root_squash,async,su
 /etc/init.d/nfs-kernel-server restart
 else
 apt-get -f install /home/user/auto/sharing/client/*.deb
-deb mkdir -p /home/user/share/
+mkdir -p /home/user/share/
 fi
 
 # Configuration time_syncro
@@ -219,13 +219,13 @@ if [ $srv_clnt = server ]
 then
 cp /home/user/auto/timesync/server/time_sync_server.service /etc/systemd/system/
 cp /home/user/auto/timesync/server/time.sh /home/user/programs/time_syncro/
-sed -i "/time_syncro/c /home/user/auto/timesync/time_syncro -s $time_syncro_srv_port" /home/user/programs/time_syncro/time.sh
+sed -i "/time_syncro/c /home/user/programs/time_syncro/time_syncro -s $time_syncro_srv_port" /home/user/programs/time_syncro/time.sh
 systemctl enable time_sync_server.service
 else
 cp /home/user/auto/timesync/client/time_sync_client.service /etc/systemd/system/
 cp /home/user/auto/timesync/client/time.sh /home/user/programs/time_syncro/
 time_syncro_tmp=$time_syncro_srv_ip":"$time_syncro_srv_port" "$time_syncro_period
-sed -i "/time_syncro/c /home/user/auto/timesync/time_syncro -c $time_syncro_tmp" /home/user/programs/time_syncro/time.sh
+sed -i "/time_syncro/c /home/user/programs/time_syncro/time_syncro -c $time_syncro_tmp" /home/user/programs/time_syncro/time.sh
 systemctl enable time_sync_client.service
 fi
 chmod +x /home/user/programs/time_syncro/time.sh

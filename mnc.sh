@@ -172,7 +172,7 @@ cd /home/user/DPDK/
 tar xf ./dpdk-16.11.3.tar.xz
 cd ./dpdk-stable-16.11.3/
 make install DESTDIR=dpdk_install T=x86_64-native-linuxapp-gcc CONFIG_RTE_BUILD_SHARED_LIB=y EXTRA_CFLAGS="-fPIC"
-sed -i "s/GRUB_CMDLINE_LINUX=\"/&default_hugepagesz=1G\ hugepagesz=1G\ hugepages=2\ isolcpus=$cpu_cores/g" $file_grub
+sed -i "s/GRUB_CMDLINE_LINUX=\"/&default_hugepagesz=1G\ hugepagesz=1G\ hugepages=0\ isolcpus=$cpu_cores/g" $file_grub
 update-grub
 cp /home/user/auto/other/HGPG_for_DPDK.service /etc/systemd/system/
 cp /home/user/auto/other/distrib_HGPG_DPDK.sh /home/user/DPDK/

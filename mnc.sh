@@ -35,15 +35,15 @@ srv_clnt=2
 time_syncro_srv_port=0
 time_syncro_srv_ip=""
 while [ $srv_clnt == 2 ]; do
-  echo "Выбор варианта установки ПО:"
+  echo "Choose the installation way:"
   printf "0 - [S]erver\n1 - [C]lient\n"
   read response
   case $response in
-  0|[sS]* ) echo "Выбран вариант Server"
+  0|[sS]* ) echo "The Server option has been chosen."
       srv_clnt="server";;
-  1|[cC]* ) echo "Выбран вариант Client"
+  1|[cC]* ) echo "The Client option has been chosen."
       srv_clnt="client";;
-  * ) echo "Ваще тупой, да? Давай ещё раз попробуй.";;
+  * ) echo "One more time....";;
   esac
 done
 echo "Вариант реализации пультовой части:"
@@ -97,6 +97,9 @@ case $srv_clnt in
 esac
 echo "Введите через пробел диапазон ядер для изоляции:"
 read first_cpu_core last_cpu_core
+echo "Range of cores has been chosen: $first_cpu_core - $last_cpu_core"
+echo "Use autostart of ipmimon (yes or no)? Use one only if you have enough resorces."
+read auto_ipmimon
 echo "Используются следующие параметры:"
 echo "Вариант установки ПО - $srv_clnt"
 if [ $srv_clnt == "server" ]
@@ -109,6 +112,10 @@ else
   echo "IP-адресс share-сервера - $share_server_ip"
 fi
 echo "Используются ядра $first_cpu_core - $last_cpu_core"
+case $auto_ipmimon in
+  [yY]es ) echo "ipmimon.service is in autostart mode";;
+  * ) echo "ipmimon.service is not in autostart mode";;
+esac
 echo -n "Всё верно?(если да - пиши 'ок'): "
 read cond
 done
@@ -187,7 +194,12 @@ echo "/home/user/DPDK/dpdk-stable-16.11.3/x86_64-native-linuxapp-gcc/lib/" | tee
 cp /home/user/auto/other/dpdkbind.service /etc/systemd/system/
 cp /home/user/auto/other/ipmimon.service /etc/systemd/system/
 systemctl enable dpdkbind.service
+if [[ $auto_ipmimon = [yY]es ]]
+then 
 systemctl enable ipmimon.service
+else
+systemctl disable ipmimon.service
+fi
 ldconfig
 cp /home/user/auto/libhtgiolib/libhtgiolib.so.1.3.0 /home/user/DPDK/
 ln -s /home/user/DPDK/libhtgiolib.so.1.3.0 /usr/lib/libhtgiolib.so

@@ -30,7 +30,7 @@ ldconfig
 else
 # First starting
 while [[ $cond != "ok" ]]; do
-echo "Сначала читай текст ВНИМАТЕЛЬНО, потом читай ЕЩЁ ВНИМАТЕЛЬНЕЕ, потом ДУМАЙ, потом уже вводи данные!"
+echo "Be attentive before input!"
 srv_clnt=2
 time_syncro_srv_port=0
 time_syncro_srv_ip=""
@@ -46,37 +46,37 @@ while [ $srv_clnt == 2 ]; do
   * ) echo "One more time....";;
   esac
 done
-echo "Вариант реализации пультовой части:"
+echo "The PU's type:"
 while [[ $response_pu != [0-1] ]]; do
-printf "0 - 83 приказ\n1 - NT\n"
+printf "0 - 83-rd order\n1 - NT\n"
 read response_pu
 done
 case $response_pu in
-  0 ) echo "Вариант реализации пультовой части: 83 приказ";;
-  1 ) echo "Вариант реализации пультовой части: NT";;
-  * ) echo "КОСЯК! Вариант реализации пультовой части: Неизвестно"
+  0 ) echo "The PU's type is 83-rd order";;
+  1 ) echo "The PU's type is NT";;
+  * ) echo "ERROR! The PU's type is unknown!"
       exit;;
 esac
 case $srv_clnt in
   "server" ) while [[ $time_syncro_srv_port -le 1024 || $time_syncro_srv_port -gt 65535 ]]; do
-      echo "Порт [1025 - 65535] для подключения клиентов time_syncro (по умолчанию 27333) : "
+      echo "Port [1025 - 65535] for time_syncro clients' connecting (default 27333) : "
       read time_syncro_srv_port
       if [ -z $time_syncro_srv_port ]
       then time_syncro_srv_port=27333
       else :
       fi
       done
-      echo "Выбран порт для подключения клиентов time_syncro: $time_syncro_srv_port"
-      echo "IP-адрес для share-сервера (для тех, кто в танке - адрес этого сервера):"
+      echo "Port for time_syncro clients' connecting has been chosen: $time_syncro_srv_port"
+      echo "IP-address for share-server (local ip-address):"
       read share_server_ip
-      echo "Установлен адрес share-сервера: $share_server_ip"
+      echo "Share-server's ip-address has been setted: $share_server_ip"
       ;;
   "client" ) while [[ -z $time_syncro_srv_ip ]]; do
-      echo "Адрес сервера time_syncro:"
+      echo "Time_syncro server's ip-address : "
       read time_syncro_srv_ip
       done
       while [[ $time_syncro_srv_port -le 1024 || $time_syncro_srv_port -gt 65535 ]]; do
-      echo "Порт [1025 - 65535] для подключения клиентов time_syncro (по умолчанию 27333) : "
+      echo "Port [1025 - 65535] for time_syncro clients' connecting (default 27333) : "
       read time_syncro_srv_port
       if [ -z $time_syncro_srv_port ]
       then time_syncro_srv_port=27333
@@ -84,39 +84,39 @@ case $srv_clnt in
       :
       fi
       done
-      echo "Выбран порт для подключения клиентов time_syncro: $time_syncro_srv_port"
-      echo "Период опроса сервера time_syncro (в минутах):"
+      echo "Port for time_syncro clients' connecting has been chosen: $time_syncro_srv_port"
+      echo "Range of cores has been chosen (minutes):"
       read time_syncro_period
-      echo "Установлен период опроса сервера time_syncro (в минутах): $time_syncro_period"
-      echo "IP-адресс для share-сервера:"
+      echo "The time_syncro server's range has been setted (minuts): $time_syncro_period"
+      echo "Share-server's ip-address:"
       read share_server_ip
-      echo "Установлен адрес share-сервера: $share_server_ip"
+      echo "Share-server's ip-address has been setted : $share_server_ip"
       ;;
-  * ) echo "Нет понятия о варианте установки"
+  * ) echo "The installation way is unknown! Bye :("
       exit;;
 esac
-echo "Введите через пробел диапазон ядер для изоляции:"
+echo "Type via space a range for segregation of cores:"
 read first_cpu_core last_cpu_core
 echo "Range of cores has been chosen: $first_cpu_core - $last_cpu_core"
 echo "Use autostart of ipmimon (yes or no)? Use one only if you have enough resorces."
 read auto_ipmimon
-echo "Используются следующие параметры:"
-echo "Вариант установки ПО - $srv_clnt"
+echo "These options will be used:"
+echo "The installation way is - $srv_clnt"
 if [ $srv_clnt == "server" ]
 then
-  echo "Порт для подключения клиентов time_syncro - $time_syncro_srv_port"
-  echo "IP-адресс share-сервера - $share_server_ip"
+  echo "Port for time_syncro clients' connecting - $time_syncro_srv_port"
+  echo "Share server's ip-address - $share_server_ip"
 else
-  echo "Адрес сервера time_syncro - $time_syncro_srv_ip:$time_syncro_srv_port"
-  echo "Период опроса сервера time_syncro (в минутах): $time_syncro_period"
-  echo "IP-адресс share-сервера - $share_server_ip"
+  echo "Time_syncro server's ip-address - $time_syncro_srv_ip:$time_syncro_srv_port"
+  echo "Period of requesting time_syncro server (minutes): $time_syncro_period"
+  echo "Share-server's ip-address - $share_server_ip"
 fi
-echo "Используются ядра $first_cpu_core - $last_cpu_core"
+echo "Used cores $first_cpu_core - $last_cpu_core"
 case $auto_ipmimon in
   [yY]es ) echo "ipmimon.service is in autostart mode";;
   * ) echo "ipmimon.service is not in autostart mode";;
 esac
-echo -n "Всё верно?(если да - пиши 'ок'): "
+echo -n "Are all correct? (if yes - type 'ok'): "
 read cond
 done
 

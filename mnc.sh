@@ -167,7 +167,7 @@ case $response_pu in
   1 ) tar -xf /home/user/auto/programs/NT/programs.tar.gz -C /home/user/programs/
       cp /home/user/auto/programs/NT/lib/*.so /usr/lib/
       ;;
-  2 ) tar -xf /home/user/auto/programs/2Iq/programs.tar.gz -C /home/user/programs/
+  2 ) tar -xf /home/user/auto/programs/2I/programs.tar.gz -C /home/user/programs/
       cp /home/user/auto/programs/2I/lib/*.so /usr/lib/
       ;;
   * ) echo "КОСЯК! Вариант реализации пультовой части: Неизвестно"

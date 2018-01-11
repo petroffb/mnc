@@ -48,12 +48,13 @@ while [ $srv_clnt == 2 ]; do
 done
 echo "The PU's type:"
 while [[ $response_pu != [0-1] ]]; do
-printf "0 - 83-rd order\n1 - NT\n"
+printf "0 - 83-rd order\n1 - NT\n2 - 2I\n"
 read response_pu
 done
 case $response_pu in
   0 ) echo "The PU's type is 83-rd order";;
   1 ) echo "The PU's type is NT";;
+  2 ) echo "The PU's type is 2I";;
   * ) echo "ERROR! The PU's type is unknown!"
       exit;;
 esac
@@ -165,6 +166,9 @@ case $response_pu in
       ;;
   1 ) tar -xf /home/user/auto/programs/NT/programs.tar.gz -C /home/user/programs/
       cp /home/user/auto/programs/NT/lib/*.so /usr/lib/
+      ;;
+  2 ) tar -xf /home/user/auto/programs/2Iq/programs.tar.gz -C /home/user/programs/
+      cp /home/user/auto/programs/2I/lib/*.so /usr/lib/
       ;;
   * ) echo "КОСЯК! Вариант реализации пультовой части: Неизвестно"
       ;;

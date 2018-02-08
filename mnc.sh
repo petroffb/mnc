@@ -5,6 +5,7 @@ file_auto_update50=/etc/apt/apt.conf.d/50unattended-upgrades
 file_repo=/etc/apt/sources.list
 file_grub=/etc/default/grub
 cond="bad"
+file_run_sh=/home/user/programs/run.sh
 
 if [ -f /home/user/script_flag ]
 # Second starting
@@ -29,6 +30,14 @@ rm /home/user/script_flag
 ldconfig
 else
 # First starting
+last_cpu_core=$( cat /sys/devices/system/cpu/online | sed 's/0-//' )
+if [ $last_cpu_core -ge 15 ] 
+then 
+:
+else
+echo "Number of cores is too small!"
+exit
+fi
 while [[ $cond != "ok" ]]; do
 echo "Be attentive before input!"
 srv_clnt=2
@@ -86,7 +95,7 @@ case $srv_clnt in
       fi
       done
       echo "Port for time_syncro clients' connecting has been chosen: $time_syncro_srv_port"
-      echo "Range of cores has been chosen (minutes):"
+      echo "Enter the period of requesting time_syncro server (minutes):"
       read time_syncro_period
       echo "The time_syncro server's range has been setted (minuts): $time_syncro_period"
       echo "Share-server's ip-address:"
@@ -96,9 +105,7 @@ case $srv_clnt in
   * ) echo "The installation way is unknown! Bye :("
       exit;;
 esac
-echo "Type via space a range for segregation of cores:"
-read first_cpu_core last_cpu_core
-echo "Range of cores has been chosen: $first_cpu_core - $last_cpu_core"
+
 echo "Use autostart of ipmimon (yes or no)? Use one only if you have enough resorces."
 read auto_ipmimon
 echo "These options will be used:"
@@ -112,7 +119,7 @@ else
   echo "Period of requesting time_syncro server (minutes): $time_syncro_period"
   echo "Share-server's ip-address - $share_server_ip"
 fi
-echo "Used cores $first_cpu_core - $last_cpu_core"
+echo "Used cores: 2 - $last_cpu_core"
 case $auto_ipmimon in
   [yY]es ) echo "ipmimon.service is in autostart mode";;
   * ) echo "ipmimon.service is not in autostart mode";;
@@ -155,6 +162,14 @@ apt-get update
 
 dpkg -i /home/user/auto/deb_ubuntu16/*.deb
 
+#Making SWAP-file
+fallocate -l 16G /swap
+chmod 600 /swap
+mkswap /swap
+swapon /swap
+cp /etc/fstab /etc/fstab.bak
+echo '/swap none swap sw 0 0' | sudo tee -a /etc/fstab
+
 # installing programs
 mkdir /home/user/programs/
 case $response_pu in
@@ -175,13 +190,13 @@ case $response_pu in
 esac
 
 # installing DPDK
-cpu_cores="$(seq -s ',' $first_cpu_core 1 $last_cpu_core)"
+cpu_cores="$(seq -s ',' 2 1 $last_cpu_core)"
 mkdir /home/user/DPDK/
 chown user:user /home/user/DPDK/
-cp /home/user/auto/DPDK/dpdk-16.11.3.tar.xz /home/user/DPDK/
+cp /home/user/auto/DPDK/dpdk-16.11.4.tar.xz /home/user/DPDK/
 cd /home/user/DPDK/
-tar xf ./dpdk-16.11.3.tar.xz
-cd ./dpdk-stable-16.11.3/
+tar xf ./dpdk-16.11.4.tar.xz
+cd ./dpdk-stable-16.11.4/
 make install DESTDIR=dpdk_install T=x86_64-native-linuxapp-gcc CONFIG_RTE_BUILD_SHARED_LIB=y EXTRA_CFLAGS="-fPIC"
 sed -i "s/GRUB_CMDLINE_LINUX=\"/&default_hugepagesz=1G\ hugepagesz=1G\ hugepages=0\ isolcpus=$cpu_cores/g" $file_grub
 update-grub
@@ -205,11 +220,35 @@ else
 systemctl disable ipmimon.service
 fi
 ldconfig
-cp /home/user/auto/libhtgiolib/libhtgiolib.so.1.3.0 /home/user/DPDK/
-ln -s /home/user/DPDK/libhtgiolib.so.1.3.0 /usr/lib/libhtgiolib.so
+cp /home/user/auto/libhtgiolib/libhtgiolib.so.1.3.2 /home/user/DPDK/
+ln -s /home/user/DPDK/libhtgiolib.so.1.3.2 /usr/lib/libhtgiolib.so
 ln -s /lib/x86_64-linux-gnu/libprocps.so.4 /lib/x86_64-linux-gnu/libprocps.so.3
 cp /home/user/auto/boost/* /usr/lib/x86_64-linux-gnu/
 #sed -i -e '/^exit 0/i/home/user/programs/run.sh' /etc/rc.local
+
+#Binding 10G interfaces to DPDK
+echo '#!/bin/bash' > $file_run_sh
+export RTE_SDK=/home/user/DPDK/dpdk-stable-16.11.4
+echo 'RTE_SDK=/home/user/DPDK/dpdk-stable-16.11.4' >> $file_run_sh
+export RTE_TARGET=x86_64-native-linuxapp-gcc
+echo 'export RTE_TARGET=x86_64-native-linuxapp-gcc' >> $file_run_sh
+cd /home/user/DPDK/dpdk-stable-16.11.4
+echo 'cd /home/user/DPDK/dpdk-stable-16.11.4' >> $file_run_sh
+modprobe uio 
+echo 'modprobe uio' >> $file_run_sh
+insmod /home/user/DPDK/dpdk-stable-16.11.4/x86_64-native-linuxapp-gcc/kmod/igb_uio.ko
+echo 'insmod /home/user/DPDK/dpdk-stable-16.11.4/x86_64-native-linuxapp-gcc/kmod/igb_uio.ko' >> $file_run_sh
+cd /home/user/DPDK/dpdk-stable-16.11.4/tools/
+echo 'cd /home/user/DPDK/dpdk-stable-16.11.4/tools/' >> $file_run_sh
+for tmp_str in $(./dpdk-devbind.py -s | awk '/X710|X540/ {print $1}')
+do
+  ./dpdk-devbind.py -u $tmp_str
+  echo './dpdk-devbind.py -u' $tmp_str >> $file_run_sh
+  ./dpdk-devbind.py --bind=igb_uio $tmp_str
+  echo './dpdk-devbind.py --bind=igb_uio' $tmp_str >> $file_run_sh
+done
+export LD_LIBRARY_PATH=/home/user/DPDK/dpdk-stable-16.11.4/x86_64-native-linuxapp-gcc/lib
+echo 'export LD_LIBRARY_PATH=/home/user/DPDK/dpdk-stable-16.11.4/x86_64-native-linuxapp-gcc/lib' >> $file_run_sh
 
 # Configuration share-service
 if [ $srv_clnt = server ]

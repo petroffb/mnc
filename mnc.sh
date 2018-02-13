@@ -108,6 +108,8 @@ esac
 
 echo "Use autostart of ipmimon (yes or no)? Use one only if you have enough resorces."
 read auto_ipmimon
+echo "Create SWAP-file? (yes\no):"
+read bool_swap_file
 echo "These options will be used:"
 echo "The installation way is - $srv_clnt"
 if [ $srv_clnt == "server" ]
@@ -123,6 +125,10 @@ echo "Used cores: 2 - $last_cpu_core"
 case $auto_ipmimon in
   [yY]es ) echo "ipmimon.service is in autostart mode";;
   * ) echo "ipmimon.service is not in autostart mode";;
+esac
+case $bool_swap_file in
+  [yY]es ) echo "create SWAP-file";;
+  * ) echo "don't create SWAP-file";;
 esac
 echo -n "Are all correct? (if yes - type 'ok'): "
 read cond
@@ -163,12 +169,16 @@ apt-get update
 dpkg -i /home/user/auto/deb_ubuntu16/*.deb
 
 #Making SWAP-file
-fallocate -l 16G /swap
-chmod 600 /swap
-mkswap /swap
-swapon /swap
-cp /etc/fstab /etc/fstab.bak
-echo '/swap none swap sw 0 0' | sudo tee -a /etc/fstab
+case $bool_swap_file in
+  [yY]es )  fallocate -l 16G /swap
+	    chmod 600 /swap
+	    mkswap /swap
+	    swapon /swap
+	    cp /etc/fstab /etc/fstab.bak
+	    echo '/swap none swap sw 0 0' | sudo tee -a /etc/fstab;;
+  * ) ;;
+esac
+
 
 # installing programs
 mkdir /home/user/programs/
@@ -209,7 +219,7 @@ mkdir -p /mnt/huge
 touch /etc/ld.so.conf.d/library.conf
 echo "/home/user/programs/library/" | tee -a /etc/ld.so.conf.d/library.conf
 touch /etc/ld.so.conf.d/librte.conf
-echo "/home/user/DPDK/dpdk-stable-16.11.3/x86_64-native-linuxapp-gcc/lib/" | tee -a /etc/ld.so.conf.d/librte.conf
+echo "/home/user/DPDK/dpdk-stable-16.11.4/x86_64-native-linuxapp-gcc/lib/" | tee -a /etc/ld.so.conf.d/librte.conf
 cp /home/user/auto/other/dpdkbind.service /etc/systemd/system/
 cp /home/user/auto/other/ipmimon.service /etc/systemd/system/
 systemctl enable dpdkbind.service
@@ -229,7 +239,7 @@ cp /home/user/auto/boost/* /usr/lib/x86_64-linux-gnu/
 #Binding 10G interfaces to DPDK
 echo '#!/bin/bash' > $file_run_sh
 export RTE_SDK=/home/user/DPDK/dpdk-stable-16.11.4
-echo 'RTE_SDK=/home/user/DPDK/dpdk-stable-16.11.4' >> $file_run_sh
+echo 'export RTE_SDK=/home/user/DPDK/dpdk-stable-16.11.4' >> $file_run_sh
 export RTE_TARGET=x86_64-native-linuxapp-gcc
 echo 'export RTE_TARGET=x86_64-native-linuxapp-gcc' >> $file_run_sh
 cd /home/user/DPDK/dpdk-stable-16.11.4

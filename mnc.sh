@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# Variables
 file_auto_update20=/etc/apt/apt.conf.d/20auto-upgrades
 file_auto_update50=/etc/apt/apt.conf.d/50unattended-upgrades
 file_repo=/etc/apt/sources.list
@@ -7,7 +8,35 @@ file_grub=/etc/default/grub
 cond="bad"
 file_run_sh=/home/user/programs/run.sh
 
-if [ -f /home/user/script_flag ]
+# Functions
+function make_swap {
+  fallocate -l 16G /swap
+  chmod 600 /swap
+  mkswap /swap
+  swapon /swap
+  cp /etc/fstab /etc/fstab.bak
+  echo '/swap none swap sw 0 0' | sudo tee -a /etc/fstab
+}
+
+function install_analizpack {
+  mkdir /opt/oracle/
+  tar -xf /home/user/auto/programs/instantclient_12_2.tar.gz -C /opt/oracle/
+  cd /opt/oracle/instantclient_12_2
+  ln -s libclntsh.so.12.1 libclntsh.so
+  ln -s libocci.so.12.1 libocci.so
+  echo /opt/oracle/instantclient_12_2 > /etc/ld.so.conf.d/oracle.conf
+  ldconfig
+  tar -xf /home/user/auto/programs/Analizpack.tar.gz -C /home/user/programs/
+  mkdir /etc/oracle
+  mv /home/user/programs/Analizpack/tnsnames.ora /etc/oracle/
+  chmod 0644 /etc/oracle/tnsnames.ora
+  echo TNS_ADMIN=\"/etc/oracle\" >> /etc/environment
+  echo NLS_LANG=\"AMERICAN_RUSSIA.AL32UTF8\" >> /etc/environment
+  echo TZ=\"Asia/Almaty\" >> /etc/environment
+}
+
+# Body
+if [[ -f /home/user/script_flag ]]
 # Second starting
 then
 counter=0
@@ -31,6 +60,7 @@ ldconfig
 else
 # First starting
 last_cpu_core=$( cat /sys/devices/system/cpu/online | sed 's/0-//' )
+let "res = ($last_cpu_core + 1) / 4"
 if [ $last_cpu_core -ge 15 ] 
 then 
 :
@@ -56,7 +86,7 @@ while [ $srv_clnt == 2 ]; do
   esac
 done
 echo "The PU's type:"
-while [[ $response_pu != [0-1] ]]; do
+while [[ $response_pu != [0-2] ]]; do
 printf "0 - 83-rd order\n1 - NT\n2 - 2I\n"
 read response_pu
 done
@@ -67,6 +97,8 @@ case $response_pu in
   * ) echo "ERROR! The PU's type is unknown!"
       exit;;
 esac
+printf "Will you use Analizpack? (yes\no): "
+read use_analizpack
 case $srv_clnt in
   "server" ) while [[ $time_syncro_srv_port -le 1024 || $time_syncro_srv_port -gt 65535 ]]; do
       echo "Port [1025 - 65535] for time_syncro clients' connecting (default 27333) : "
@@ -122,6 +154,10 @@ else
   echo "Share-server's ip-address - $share_server_ip"
 fi
 echo "Used cores: 2 - $last_cpu_core"
+case $use_analizpack in
+  [yY]es ) echo "Analizpack will be used";;
+  * ) echo "Analizpack will not be used";;
+esac
 case $auto_ipmimon in
   [yY]es ) echo "ipmimon.service is in autostart mode";;
   * ) echo "ipmimon.service is not in autostart mode";;
@@ -160,22 +196,19 @@ else
 echo $file_auto_update50 does not exist
 fi
 
-cp -r ./auto/ /home/user/
+#cp -r ./auto/ /home/user/
 
 sed -i 's/^[0-9A-Za-z]/\#&/g' $file_repo
 
 apt-get update
 
 dpkg -i /home/user/auto/deb_ubuntu16/*.deb
+ln /usr/lib/libipmimonitoring.so /usr/lib/libipmimonitoring.so.6
 
 #Making SWAP-file
 case $bool_swap_file in
-  [yY]es )  fallocate -l 16G /swap
-	    chmod 600 /swap
-	    mkswap /swap
-	    swapon /swap
-	    cp /etc/fstab /etc/fstab.bak
-	    echo '/swap none swap sw 0 0' | sudo tee -a /etc/fstab;;
+  [yY]es )  make_swap
+	    ;;
   * ) ;;
 esac
 
@@ -186,7 +219,7 @@ case $response_pu in
   0 ) tar -xf /home/user/auto/programs/83/programs.tar.gz -C /home/user/programs/
       cp /home/user/auto/programs/83/lib/*.so /usr/lib/
       mkdir /mnt/ram_disk/
-      printf "tmpfs     /mnt/ram_disk     tmpfs     rw,size=10G,x-gvfs-show     0 0\n" >> /etc/fstab
+      printf "tmpfs     /mnt/ram_disk     tmpfs     rw,size=20G,x-gvfs-show     0 0\n" >> /etc/fstab
       mount -a      
       ;;
   1 ) tar -xf /home/user/auto/programs/NT/programs.tar.gz -C /home/user/programs/
@@ -199,8 +232,34 @@ case $response_pu in
       ;;
 esac
 
+echo "* hard nofile 500000" >> /etc/security/limits.conf
+echo "* soft nofile 500000" >> /etc/security/limits.conf
+echo "root hard nofile 500000" >> /etc/security/limits.conf
+echo "root soft nofile 500000" >> /etc/security/limits.conf
+
+setcap cap_sys_ptrace=iep /home/user/programs/wrhg64/wrhg
+setcap cap_sys_ptrace=iep /home/user/programs/sorm/sorm
+
+cp /home/user/programs/library/libCPSData_1.so /usr/lib/
+cp /home/user/programs/library/libm83m.so /usr/lib/
+cp /home/user/programs/library/libUDPCapt.so /usr/lib/
+cp /home/user/programs/library/libm2nt.so /usr/lib/
+
+cat /home/user/auto/programs/net_conf_ubuntu.txt >> /etc/sysctl.conf
+
+# Configuration FTP
+cp /etc/vsftpd.conf /etc/vsftpd.conf.orig
+cat /home/user/auto/programs/ftp_config.txt > /etc/vsftpd.conf
+/etc/init.d/vsftpd restart
+
+case $use_analizpack in
+  [yY]es )  install_analizpack
+	    ;;
+  * ) 	;;
+esac
+
 # installing DPDK
-cpu_cores="$(seq -s ',' 2 1 $last_cpu_core)"
+cpu_cores=$( echo $(seq -s ',' 4 1 $last_cpu_core) | sed -e "s/$res,//" )
 mkdir /home/user/DPDK/
 chown user:user /home/user/DPDK/
 cp /home/user/auto/DPDK/dpdk-16.11.4.tar.xz /home/user/DPDK/
